@@ -1,0 +1,161 @@
+#code to add aluminum and hydrogen to zeolite structure
+import glob
+from pymatgen.core.structure import Structure
+from pymatgen.io.ase import AseAtomsAdaptor
+from pymatgen.analysis.structure_matcher import StructureMatcher
+from ase.neighborlist import primitive_neighbor_list
+import numpy as np
+import ase.neighborlist as nl
+
+
+def analyze_structure(file_path, cutoff=3.0, nth_closest=0):
+    structure = Structure.from_file(file_path)
+
+
+    new_structures = []
+    for i, site in enumerate(structure):
+        if site.species_string == 'Si':
+            struct = structure.copy()
+            struct.replace(i, 'Al')
+            new_structures.append(struct)
+
+    matcher = StructureMatcher()
+    groups = matcher.group_structures(new_structures)
+
+
+    for i, group in enumerate(groups):
+        print(f"Group {i}:")
+        for j, s in enumerate(group):
+            print(f"\t- Structure {j}: {s}")
+            
+        last_struct = groups[0][-1]
+
+    ase_adaptor = AseAtomsAdaptor()
+    ase_atoms = ase_adaptor.get_atoms(last_struct)
+   
+    cell = ase_atoms.get_cell()
+    
+    indices_i, indices_j, distances_ij, D_ij, S_ij = primitive_neighbor_list('ijdDS', ase_atoms, ase_atoms.cell[:], ase_atoms.get_positions(), cutoff)
+
+
+
+    for i, atom in enumerate(ase_atoms):
+        if atom.symbol == 'Al':
+            neighbor_indices = indices_j[indices_i == i]
+            neighbor_atoms = [ase_atoms[j].symbol for j in neighbor_indices]
+            neighbor_oxygen_indices = [j for j, symbol in zip(neighbor_indices, neighbor_atoms) if symbol == 'O']
+ 
+
+            if neighbor_oxygen_indices:
+                neighbor_distances = distances_ij[indices_i == i]
+                sorted_indices = np.argsort(neighbor_distances)
+                nth_closest_index = neighbor_oxygen_indices[sorted_indices[nth_closest]]
+                nth_closest_distance = neighbor_distances[sorted_indices[nth_closest]]
+
+                nth_closest_oxygen = last_struct.sites[nth_closest_index].coords
+                print(f"nth_closest_oxygen {nth_closest_oxygen}")
+   
+
+
+                # Calculate distance vector for Al-O
+                distance_vector_Al_O = D_ij[indices_i == i][sorted_indices[nth_closest]]
+                second_closest_distance_vector = D_ij[indices_i == i][sorted_indices[nth_closest + 1]]
+                
+   
+            
+
+                indices_i_O, indices_j_O, distances_ij_O, D_ij_O, S_ij_O = primitive_neighbor_list('ijdDS', ase_atoms, ase_atoms.get_cell()[:], ase_atoms.get_positions(), cutoff)
+
+                neighbor_indices_O = indices_j_O[indices_i_O == nth_closest_index]
+                neighbor_atoms_O = [ase_atoms[j].symbol for j in neighbor_indices_O]
+                neighbor_silicon_indices = [j for j, symbol in zip(neighbor_indices_O, neighbor_atoms_O) if symbol == 'Si']
+
+
+
+                if neighbor_silicon_indices:
+                    silicon_mask = np.isin(neighbor_indices_O, neighbor_silicon_indices)
+                    neighbor_indices_O_Si = neighbor_indices_O[silicon_mask]
+                    neighbor_distances_O_Si = distances_ij_O[indices_i_O == nth_closest_index][silicon_mask]
+                    neighbor_distances_O_Si = np.argsort(neighbor_distances_O_Si)
+                    closest_silicon_index = neighbor_silicon_indices[np.argmin(neighbor_distances_O_Si)]
+                    closest_silicon_distance = np.min(neighbor_distances_O_Si)                 
+                    closest_silicon_coords = last_struct.sites[closest_silicon_index].coords
+                    
+
+                    # Calculate distance vector for Si-O
+                    distance_vector_si_o = D_ij_O[neighbor_distances_O_Si]
+                    si_coords = nth_closest_oxygen + distance_vector_si_o 
+                    si_coords = si_coords[0]
+
+
+                    aluminum_coords = atom.position
+
+                    vector_Si_O = distance_vector_si_o
+
+                    angle = calculate_angle(aluminum_coords, nth_closest_oxygen, closest_silicon_coords)
+                    if angle == 180:
+                        vector_Al_O =  distance_vector_Al_O
+                        vector_Al_O2 = second_closest_distance_vector
+                        vector_Al_O /= np.linalg.norm(vector_Al_O)
+                        vector_Al_O2 /= np.linalg.norm(vector_Al_O2)
+                        total_vector = np.cross(vector_Al_O, vector_Al_O2)
+                        
+                        total_vector /= np.linalg.norm(total_vector)
+                        total_vector = total_vector * 0.96
+
+                        hydrogen_position = total_vector + nth_closest_oxygen
+                        calculate_and_print_angle("Al-O-H", aluminum_coords, nth_closest_oxygen, hydrogen_position)
+                        calculate_and_print_angle("Si-O-H", closest_silicon_coords, nth_closest_oxygen, hydrogen_position)
+                        calculate_and_print_angle("Al-O-Si", aluminum_coords, nth_closest_oxygen, closest_silicon_coords)
+                        s = last_struct.copy()
+                        s.append("H", hydrogen_position, coords_are_cartesian=True)
+                        print(s)
+                        #s.to("POSCAR")
+                        s.to("Struct.cif")
+                    
+
+                    else:
+                        vector_Al_O = distance_vector_Al_O
+                        vector_Si_O = distance_vector_si_o
+                        vector_Si_O = vector_Si_O[0]
+                        vector_Al_O /= np.linalg.norm(vector_Al_O)
+                        vector_Si_O /= np.linalg.norm(vector_Si_O)
+                        total_vector = vector_Al_O + vector_Si_O
+                        total_vector /= np.linalg.norm(total_vector)
+                        total_vector = total_vector * 0.96
+                        
+                        
+                        hydrogen_position = total_vector + nth_closest_oxygen  # Initialize hydrogen_position
+                        print(f"nth_closest_oxygen {nth_closest_oxygen}")
+                        calculate_and_print_angle("Al-O-H", aluminum_coords, nth_closest_oxygen, hydrogen_position)
+                        calculate_and_print_angle("Si-O-H", si_coords, nth_closest_oxygen, hydrogen_position)
+                        calculate_and_print_angle("Al-O-Si", aluminum_coords, nth_closest_oxygen, si_coords)
+
+                        
+                        s = last_struct.copy()
+                        s.append("H", hydrogen_position, True, True)
+                        print(s)
+                        s.to("Struct.cif")
+                        #s.to("POSCAR")
+
+
+
+
+
+def calculate_and_print_angle(label, point1, point2, point3):
+    angle = calculate_angle(point1, point2, point3)
+    print(f"Angle {label}: {angle}")
+
+
+def calculate_angle(point1, point2, point3):
+    vector1 = point1 - point2
+    vector2 = point3 - point2
+    cosine_angle = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+    angle = np.arccos(cosine_angle)
+    return np.degrees(angle)
+
+
+
+file_path = "/Users/eolanrew/Desktop/CIF FILES/ACO.cif"
+
+analyze_structure(file_path)
