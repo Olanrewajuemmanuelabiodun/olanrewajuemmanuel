@@ -1,0 +1,16 @@
+from sympy import symbols, Eq, solve
+
+# Define the symbols
+x, y, z = symbols('x y z')
+
+# Define the equations
+eq1 = Eq(-0.9162*x + 1.3216*z + 5.1796, 0)
+eq2 = Eq(-0.7108*x - 0.5019*y -0.4927*z + 7.0026, 0)
+eq3 = Eq((x-7.8628)**2 + (y-1.3135)**2 + (z-1.5316)**2, 1)
+
+# Solve the system of equations
+sol = solve((eq1,eq2,eq3), (x, y, z))
+
+#Print the solutions
+for solution in sol:
+    print(f"The solutions are x={solution[0]}, y={solution[1]}, z={solution[2]}")
