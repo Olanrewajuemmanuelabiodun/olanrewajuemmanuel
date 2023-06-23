@@ -1,0 +1,15 @@
+import numpy as np
+
+# Load data from file
+data = np.loadtxt("/Users/eolanrew/Desktop/GULP_OUTPUT/energy_per_atom.txt")
+
+# Calculate mean, median, and standard deviation
+mean = np.mean(data)
+median = np.median(data)
+std = np.std(data)
+
+# Print results
+print("Mean:", mean)
+print("Median:", median)
+print("Standard deviation:", std)
+
