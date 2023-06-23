@@ -1,0 +1,26 @@
+import matplotlib.pyplot as plt
+
+# Data
+labels = ['UOS', 'UOV', 'UOZ', 'USI', 'UTL', 'UWY', 'VET', 'VFI', 'VNI', 'VSV', 'WEI', 'YFI', 'YUG', 'ZON']
+Pure_silicate = [-3086.3928474181, -11317.4114221533, -5142.9404381432, -2571.3658363067, -4887.0518816249, -7716.7635998351, -2187.4187873337, -4628.112222324, -7712.7769172183, -2313.5347830711, -1284.6248314767, -7717.2674197688, -1028.9968135912, -4115.0294007032] 
+Aluminosilicate = [-3036.2330909282, -22575.3979465658, -5090.1636325972, -5091.0338984452, -9720.0782628077, -7664.4351345916, -2137.6509932985, -4577.4145443854, -7658.5486582237, -4573.7460481169, -2518.2573228803, -15379.2609716686, -2008.217057487, -4063.9991045686]
+x = range(len(labels))  # x-coordinates of the bars
+width = 0.35  # width of the bars
+
+fig, ax = plt.subplots()  # Create a figure and an axes object
+rects1 = ax.bar(x, Pure_silicate, width, label='Pure Silicate')  # Plot the bars for Pure Silicate
+rects2 = ax.bar([i + width for i in x], Aluminosilicate, width, label='Aluminosilicate')  # Plot the bars for Aluminosilicate
+
+# Adding labels, title, and customizing the plot
+ax.set_xlabel('Zeolite')
+ax.set_ylabel('Total energy')
+ax.set_title('Bar Chart of Total Energy')
+ax.set_xticks([i + width / 2 for i in x])  # Center the x-ticks
+ax.set_xticklabels(labels)  # Set the labels of the x-ticks
+ax.legend()  # Add a legend to the plot
+
+# Saving the plot as an image file
+plt.savefig('sdbarchart13.png')
+
+# Displaying the plot
+plt.show()
