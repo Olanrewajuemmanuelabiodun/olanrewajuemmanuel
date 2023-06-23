@@ -1,0 +1,22 @@
+#To print the cif files from IZA Website
+import requests
+
+# set the URL for the IZA CIF file download page
+url = 'http://www.iza-structure.org/IZA-SC/cif/'
+
+# define a list of zeolite codes to download
+zeolite_codes = ['ATO','CHA', 'CHI', 'CLO', 'DDR', 'DFO', 'DOH', 'ERI', 'EWT', 'FAR', 'FRA', 'GIU', 'HOS', 'IFT', 'IFU', 'IRR', 'IRT', 'IRY', 'ITV', 'LIO','LIT', 'LOS', 'LTF', 'LTN', 'MAR', 'MWF', 'OFF', 'OSO', 'PAR', 'PSI', 'RON', 'SAT', 'SSO', 'SVR', 'SYT', 'TOL', 'WEN']
+
+# loop through each zeolite code and download its CIF file
+for code in zeolite_codes:
+    # create the URL for the CIF file
+    cif_url = url + code + '.cif'
+
+    # send a GET request to download the CIF file
+    response = requests.get(cif_url)
+
+    # save the CIF file to the current working directory
+    with open(code + '.cif', 'wb') as f:
+        f.write(response.content)
+
+    print('CIF file for ' + code + ' downloaded and saved to current working directory')
