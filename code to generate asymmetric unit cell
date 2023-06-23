@@ -1,0 +1,17 @@
+from pymatgen.core import Structure
+
+def convert_cif_to_asymmetric_unit(cif_file_path):
+    # Read CIF file
+    structure = Structure.from_file(cif_file_path)
+
+    # Convert to asymmetric unit cell
+    asymmetric_structure = structure.get_primitive_structure()
+
+    return asymmetric_structure
+
+# Example usage
+cif_file = "/Users/eolanrew/Desktop/aluminosilicate/Struct.cif.MWW"
+asymmetric_structure = convert_cif_to_asymmetric_unit(cif_file)
+print(asymmetric_structure)
+with open('MWW', 'w') as f:
+    print(asymmetric_structure, file=f)
