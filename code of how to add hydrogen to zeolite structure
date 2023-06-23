@@ -1,0 +1,84 @@
+from sympy import symbols, Eq, solve, sqrt
+import numpy as np
+from pymatgen.core.structure import Structure
+
+# Define the symbols
+x, y, z = symbols('x y z')
+# Determine coordinates of hydrogen atom
+Coordinates_of_hydrogen = np.array([x,y,z])
+
+# Function to find atom indices
+def find_atom_indices(structure, atom1="Al", atom2="O"):
+    atom1_idx, atom2_indices = None, []
+    for idx, site in enumerate(structure):
+        if site.species_string == atom1:
+            atom1_idx = idx
+        elif site.species_string == atom2:
+            atom2_indices.append(idx)
+    return atom1_idx, atom2_indices
+
+# Function to calculate vectors
+def calculate_vectors(structure, atom1_idx, atom2_indices):
+    atom1_coord = structure[atom1_idx].coords
+    atom2_coords = np.array([structure[i].coords for i in atom2_indices])
+    distances = np.linalg.norm(atom2_coords - atom1_coord, axis=1)
+    closest_indices = np.argsort(distances)[:2]
+    return atom1_coord, atom2_coords, closest_indices
+
+# Get atom indices
+aluminum_idx, oxygen_indices = find_atom_indices(s)
+
+# Calculate vectors
+aluminum_coord, oxygen_coords, closest_indices = calculate_vectors(s, aluminum_idx, oxygen_indices)
+
+# Determine coordinates of closest and second closest oxygen atoms
+closest_oxygen_coord = oxygen_coords[closest_indices[0]]
+second_closest_oxygen_coord = oxygen_coords[closest_indices[1]]
+
+# Calculate midpoint between the closest oxygen atom and aluminum
+a = 0.5
+midpoint = (1 - a) * aluminum_coord + a * closest_oxygen_coord
+
+# Compute vectors from the aluminum atom to the closest and second closest oxygen atoms
+vector_al_o1 = closest_oxygen_coord - aluminum_coord
+vector_al_o2 = second_closest_oxygen_coord - aluminum_coord
+
+# Compute normal vector
+normal_vector = np.cross(vector_al_o1, vector_al_o2)
+normal_vector = normal_vector/np.linalg.norm(normal_vector)
+
+vector_midpoint_Coordinates_of_hydrogen = Coordinates_of_hydrogen - midpoint
+
+
+dot_of_vector_al_o1_and_vector_midpoint_Coordinates_of_hydrogen = np.dot(vector_al_o1, vector_midpoint_Coordinates_of_hydrogen)
+
+
+dot_of_vector_midpoint_Coordinates_of_hydrogen_and_normal_vector = np.dot(vector_midpoint_Coordinates_of_hydrogen, normal_vector)
+
+
+b = 1
+# Compute vectors
+vector_midpoint_Coordinates_of_hydrogen = Coordinates_of_hydrogen - midpoint
+
+dot_of_vector_al_o1_and_vector_midpoint_Coordinates_of_hydrogen = np.dot(vector_al_o1, vector_midpoint_Coordinates_of_hydrogen)
+
+dot_of_vector_midpoint_Coordinates_of_hydrogen_and_normal_vector = np.dot(vector_midpoint_Coordinates_of_hydrogen, normal_vector)
+
+
+# Define the equations
+eq1 = Eq(dot_of_vector_al_o1_and_vector_midpoint_Coordinates_of_hydrogen, 0)
+eq2 = Eq(dot_of_vector_midpoint_Coordinates_of_hydrogen_and_normal_vector, 0)
+eq3 = Eq((Coordinates_of_hydrogen[0] - midpoint[0])**2 + (Coordinates_of_hydrogen[1] - midpoint[1])**2 + (Coordinates_of_hydrogen[2] - midpoint[2])**2, 1**2)
+#print(eq3)
+
+sol = solve((eq1,eq2,eq3), (x, y, z))
+first_solution = sol[0]
+print(first_solution)
+
+# Define coordinates for Hydrogen
+hydrogen_coords = np.array([first_solution[0], first_solution[1], first_solution[2]])
+
+# Update the structure with the hydrogen atom
+s.append("H", hydrogen_coords, coords_are_cartesian=True)
+print(s)
+
