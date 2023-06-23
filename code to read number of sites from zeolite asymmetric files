@@ -1,0 +1,45 @@
+import json
+import os
+import matplotlib.pyplot as plt
+
+# Get the current working directory
+cwd = os.getcwd()
+
+# Specify the directory path
+directory_path = '/Users/eolanrew/Desktop/a'
+
+# Create an empty dictionary to store the grouped data points
+grouped_data_points = {}
+
+# Loop through all files in the directory
+for file_name in sorted(os.listdir(directory_path)):
+    # Check if the file is a text file
+    if file_name.endswith('.cif'):
+        file_path = os.path.join(directory_path, file_name)
+        # Read the file and extract the energy value
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if 'Sites' in line:
+                    energy_str = line.split()[1]
+                    energy_str = energy_str.strip('()')  # Remove parentheses
+                    energy = float(energy_str)
+                    break
+        # Print the energy value
+        print(file_name, 'Sites:', energy)
+        # Get the first three letters of the file name
+        group_key = file_name[:4]
+        # Add the energy value to the corresponding group
+        if group_key in grouped_data_points:
+            grouped_data_points[group_key].append(energy)
+        else:
+            grouped_data_points[group_key] = [energy]
+
+# Write the grouped data points to a JSON file
+json_file_path = os.path.join(cwd, 'Sites.json')
+with open(json_file_path, 'w') as f:
+    json.dump(grouped_data_points, f)
+
+# Extract the group keys and energy values from the grouped data points
+group_keys = sorted(grouped_data_points.keys())
+energies = [grouped_data_points[key] for key in group_keys]
