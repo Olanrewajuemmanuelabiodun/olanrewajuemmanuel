@@ -1,0 +1,33 @@
+import json
+import os
+import matplotlib.pyplot as plt
+
+def create_scatter_plot_from_json(json_file_path):
+    # Load data from JSON file
+    with open(json_file_path, 'r') as file:
+        data = json.load(file)
+
+    # Extract zeolite names and energy values
+    zeolites = list(data.keys())
+    energy_values = {zeolite: data[zeolite] for zeolite in zeolites}
+
+    # Create the scatter plot
+    for zeolite in zeolites:
+        x = [zeolite] * len(energy_values[zeolite])
+        y = energy_values[zeolite]
+        plt.scatter(x, y, label=zeolite)
+
+    # Customize the plot
+    plt.xlabel('Zeolite')
+    plt.ylabel('Total energy')
+    plt.title('Total energy for Zeolite')
+    plt.legend()
+
+    # Save the plot to an image file in the current directory
+    save_path = os.path.join(os.getcwd(), 'scatter22_plot.png')
+    plt.savefig(save_path)
+    print(f"Scatter plot image saved at: {save_path}")
+
+# Example usage
+json_file_path = '/Users/eolanrew/Desktop/grouped_energy 2.json'
+create_scatter_plot_from_json(json_file_path)
