@@ -24,7 +24,9 @@ for code in zeolite_codes:
 # loop through all CIF files in the current working directory
 for i in glob.glob('*.cif'):
     # read in CIF file using pymatgen
-    structure = Structure.from_file(i)
+    structure = Structure.from_file(i, frac_tolerance = 0)
+    structure.merge_sites(0.1, mode='delete')
+    #structure = structure.get_primitive_structure()
     species = [
         'species',
         'Si core 4.0000',
@@ -40,12 +42,14 @@ for i in glob.glob('*.cif'):
         'spring',
         'O 74.92',
         'three',
-        'Si core O shel O shel 2.097240 109.470000 1.8000 1.8000 3.2000 0 0',
+        'Si core O shel O shel 2.097240 109.470000 1.9000 1.9000 3.5000',
     ]
 
     
    # get primitive cell
-    structure = structure.get_primitive_structure()
+    # structure = structure.from_file(file_path, frac_tolerance = 0)
+    # structure.merge_sites(0.1, mode='delete')
+    # structure = structure.get_primitive_structure()
     # check if the number of oxygen atoms is twice the number of silicon atoms
     num_oxygen = sum(1 for site in structure if site.specie.symbol == 'O')
     num_silicon = sum(1 for site in structure if site.specie.symbol == 'Si')
