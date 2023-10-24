@@ -241,14 +241,8 @@ profile_page = """
     <title>{{ user.username }}'s Profile</title>
 </head>
 <body>
-    <h2>Profile</h2>
-    <p>Username: {{ user.username }}</p>
-    <p>Sex: {{ user.sex }}</p>
-    <p>Age: {{ user.age }}</p>
-    <p>Country: {{ user.country }}</p>
-    {% if user.profile_picture %}
-    <img src="{{ user.profile_picture }}" alt="Profile Picture" width="200">
-    {% endif %}
+    
+    <a href="/profile-details/{{ user.id }}">My Profile</a>  
     <h3>Forums</h3>
     <ul>
         <li><a href="/forum/world_news">World News</a></li>
@@ -257,6 +251,29 @@ profile_page = """
 </body>
 </html>
 """
+
+profile_details_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ user.username }}'s Details</title>
+</head>
+<body>
+    <h2>Profile Details of {{ user.username }}</h2>
+    {% if user.profile_picture %}
+        <img src="{{ url_for('static', filename='uploads/' + user.profile_picture) }}" alt="Profile Picture" width="200">
+    {% else %}
+        <p>No profile picture uploaded.</p>
+    {% endif %}
+    <p>Username: {{ user.username }}</p>
+    <p>Sex: {{ user.sex }}</p>
+    <p>Age: {{ user.age }}</p>
+    <p>Country: {{ user.country }}</p>
+    <a href="/profile">Back to My Profile</a>
+</body>
+</html>
+"""
+
 
 @app.route('/')
 def welcome():
@@ -315,7 +332,6 @@ welcome_page = """
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Assuming you have logic here to get the user based on the provided username
         username = request.form['username']
         user = User.query.filter_by(username=username).first()
 
@@ -394,6 +410,13 @@ def profile():
     user = User.query.get(user_id)
     return render_template_string(profile_page, user=user, countries=countries)
 
+@app.route('/profile-details/<int:user_id>')
+def profile_details(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        flash('User not found.')
+        return redirect(url_for('welcome'))
+    return render_template_string(profile_details_page, user=user)
 
 
 if __name__ == "__main__":
