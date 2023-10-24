@@ -29,9 +29,30 @@ class User(db.Model):
     country = db.Column(db.String(100), nullable=True)
     sex = db.Column(db.String(10), nullable=False)
     age = db.Column(db.Integer, nullable=False)
+    
+class News(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    comments = db.relationship('Comment', backref='news', lazy=True)
+
+# class Comment(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     content = db.Column(db.Text, nullable=False)
+#     news_id = db.Column(db.Integer, db.ForeignKey('news.id'), nullable=False)
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    news_id = db.Column(db.Integer, db.ForeignKey('news.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user = db.relationship('User', backref='comments')
+
 
 with app.app_context():
-    db.create_all()
+    db.drop_all()  # Drop all tables
+    db.create_all()  # Recreate them based on the ORM models
+
 
 welcome_page = """
 <!DOCTYPE html>
@@ -329,6 +350,47 @@ welcome_page = """
 </html>
 """
 
+world_news_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>World News</title>
+</head>
+<body>
+    <h2>World News</h2>
+    <ul>
+        {% for item in news %}
+            <li><a href="/forum/world_news/{{ item.id }}">{{ item.title }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+"""
+
+news_detail_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ news.title }}</title>
+</head>
+<body>
+    <h2>{{ news.title }}</h2>
+    <p>{{ news.content }}</p>
+    <h3>Comments:</h3>
+    <ul>
+        {% for comment in comments %}
+            <li>{{ comment.user.username }}: {{ comment.content }}</li>
+        {% endfor %}
+    </ul>
+    <form method="post">
+        <textarea name="comment" required></textarea>
+        <input type="submit" value="Comment">
+    </form>
+</body>
+</html>
+"""
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -398,7 +460,28 @@ def country_option_detail(country_name, option):
 
 @app.route('/forum/world_news')
 def world_news():
-    return "Welcome World News!"
+    news = News.query.all()
+    print(news)  # Check the console for this output
+    return render_template_string(world_news_page, news=news)
+
+
+@app.route('/forum/world_news/<int:news_id>', methods=['GET', 'POST'])
+def news_detail(news_id):
+    news_item = News.query.get_or_404(news_id)
+    if request.method == 'POST':
+        comment_content = request.form.get('comment')
+        user_id = session.get('user_id')
+        if not user_id:
+            flash('Please login to comment.')
+            return redirect(url_for('login'))
+        new_comment = Comment(content=comment_content, news=news_item, user_id=user_id)
+        db.session.add(new_comment)
+        db.session.commit()
+        flash('Comment added.')
+    comments = Comment.query.filter_by(news_id=news_id).all()
+    return render_template_string(news_detail_page, news=news_item, comments=comments)
+
+
 
 @app.route('/profile')
 def profile():
@@ -418,13 +501,23 @@ def profile_details(user_id):
         return redirect(url_for('welcome'))
     return render_template_string(profile_details_page, user=user)
 
+@app.route('/init_news')
+def init_news():
+    news_item = News(title="Insecurity in Nigeria", content="It is getting serious")
+    db.session.add(news_item)
+    db.session.commit()
+    return "News initialized!"
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        
+        # Check if the news item already exists
+        existing_news = News.query.filter_by(title="Insecurity in Nigeria").first()
+        if not existing_news:
+            news_item = News(title="Insecurity in Nigeria", content="It is getting serious")
+            db.session.add(news_item)
+            db.session.commit()
+            print("News initialized!")
+
     app.run(host='0.0.0.0', port=8080, debug=True)
-
-
-
-
-
