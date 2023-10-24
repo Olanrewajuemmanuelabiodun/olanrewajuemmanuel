@@ -517,26 +517,10 @@ def profile_details(user_id):
         return redirect(url_for('welcome'))
     return render_template_string(profile_details_page, user=user)
 
-# @app.route('/init_news')
-# @app.route('/init_extra_news')
-# def init_extra_news():
-#     titles = ["Soccer Today", "Live Forever"]
-#     contents = ["Details about Soccer Today...", "Details about Live Forever..."]
-
-#     for title, content in zip(titles, contents):
-#         # Check if the news already exists
-#         existing_news = News.query.filter_by(title=title).first()
-#         if not existing_news:
-#             news_item = News(title=title, content=content)
-#             db.session.add(news_item)
-
-#     db.session.commit()
-#     return "Extra news items initialized!"
-
 
 @app.route('/add_news', methods=['GET', 'POST'])
 def add_news():
-    # In a real-world application, you'd likely check if the user is authorized to add news here
+    
     if request.method == 'POST':
         title = request.form['title']
         content = request.form['content']
