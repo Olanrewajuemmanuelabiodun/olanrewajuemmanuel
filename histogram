@@ -5,7 +5,6 @@ import os
 from werkzeug.utils import secure_filename
 import datetime
 
-# Initialize Flask app
 app = Flask(__name__, static_folder='./', static_url_path='')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.secret_key = "some_secret_key_for_flask_session"
@@ -21,7 +20,6 @@ bcrypt = Bcrypt(app)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Define User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -29,7 +27,6 @@ class User(db.Model):
     profile_picture = db.Column(db.String(120), nullable=True)
     country = db.Column(db.String(100), nullable=True)
 
-# Create the database tables within an app context
 with app.app_context():
     db.create_all()
 
@@ -58,7 +55,7 @@ welcome_page = """
         /* Style for the main message */
         h2.main-message {
             font-size: 3em;
-            color: #333;  /* Optional: changed the color to a dark gray */
+            color: #333;  /* Optional: changed the color to yellow */
             margin-bottom: 20px;
         }
         
@@ -203,16 +200,16 @@ country_options_page = """
     <ul>
         <li><a href="/country/{{ country_name }}/study">Study</a></li>
         <li><a href="/country/{{ country_name }}/travel">Travel</a></li>
-        <li><a href="/country/{{ country_name }}/house">House</a></li>
+        <li><a href="/country/{{ country_name }}/housing">Housing</a></li>
         <li><a href="/country/{{ country_name }}/jobs">Jobs</a></li>
         <li><a href="/country/{{ country_name }}/dating">Dating</a></li>
         <li><a href="/country/{{ country_name }}/concert">Concert</a></li>
         <li><a href="/country/{{ country_name }}/sport">Sport</a></li>
-        <li><a href="/country/{{ country_name }}/dating">Dating</a></li>
+        <li><a href="/country/{{ country_name }}/marriage">Marriage</a></li>
         <li><a href="/country/{{ country_name }}/religion">Religion</a></li>
         <li><a href="/country/{{ country_name }}/games">Games</a></li>
         <li><a href="/country/{{ country_name }}/books">Books</a></li>
-        <li><a href="/country/{{ country_name }}/marriage">Marriage</a></li>
+        <li><a href="/country/{{ country_name }}/politics">Politics</a></li>
     </ul>
 </body>
 </html>
@@ -220,8 +217,8 @@ country_options_page = """
 
 @app.route('/')
 def welcome():
-    current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # <--- 2. Fetch current date and time
-    return render_template_string(welcome_page, current_datetime=current_datetime) # <--- Pass it to the template
+    current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")  
+    return render_template_string(welcome_page, current_datetime=current_datetime) 
 
 welcome_page = """
 <!DOCTYPE html>
