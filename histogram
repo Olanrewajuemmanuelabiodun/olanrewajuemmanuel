@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 import os
 from werkzeug.utils import secure_filename
+import datetime
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='./', static_url_path='')
@@ -191,9 +192,86 @@ Users = """
 </html>
 """
 
+country_options_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ country_name }} Options</title>
+</head>
+<body>
+    <h2>Options for {{ country_name }}</h2>
+    <ul>
+        <li><a href="/country/{{ country_name }}/study">Study</a></li>
+        <li><a href="/country/{{ country_name }}/travel">Travel</a></li>
+        <li><a href="/country/{{ country_name }}/house">House</a></li>
+        <li><a href="/country/{{ country_name }}/jobs">Jobs</a></li>
+        <li><a href="/country/{{ country_name }}/dating">Dating</a></li>
+        <li><a href="/country/{{ country_name }}/concert">Concert</a></li>
+        <li><a href="/country/{{ country_name }}/sport">Sport</a></li>
+        <li><a href="/country/{{ country_name }}/dating">Dating</a></li>
+        <li><a href="/country/{{ country_name }}/religion">Religion</a></li>
+        <li><a href="/country/{{ country_name }}/games">Games</a></li>
+        <li><a href="/country/{{ country_name }}/books">Books</a></li>
+        <li><a href="/country/{{ country_name }}/marriage">Marriage</a></li>
+    </ul>
+</body>
+</html>
+"""
+
 @app.route('/')
 def welcome():
-    return render_template_string(welcome_page)
+    current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # <--- 2. Fetch current date and time
+    return render_template_string(welcome_page, current_datetime=current_datetime) # <--- Pass it to the template
+
+welcome_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome</title>
+    <style>
+        /* Style for the entire body to center content */
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;  /* Changed from 90vh to 100vh for full viewport height */
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #f4f4f4;  /* Optional: added a light background color */
+            background-image: url('/frontpage.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* Style for the main message */
+        h2.main-message {
+            font-size: 3em;
+            color: #333;  /* Optional: changed the color to a dark gray */
+            margin-bottom: 20px;
+            text-align: center;  /* Added to centralize text */
+        }
+        
+        /* Style for the secondary message */
+        h2.secondary-message {
+            margin-bottom: 10px;
+            text-align: center;  /* Added to centralize text */
+        }
+    </style>
+</head>
+<body>
+    <div class="content-wrapper"> <!-- Wrapper to hold and centralize the content -->
+        <h2 class="main-message">Connection Forum</h2>
+        <h2 class="secondary-message">Welcome Back!</h2>
+        <p><a href="/register">Create an account</a></p>
+        <p><a href="/login">Login</a></p>
+        <p>Current Date and Time: {{ current_datetime }}</p>
+    </div>
+</body>
+</html>
+"""
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -228,7 +306,6 @@ def register():
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-        # Handle the picture upload
         profile_picture_filename = None
         if 'picture' in request.files:
             file = request.files['picture']
@@ -253,8 +330,11 @@ def select_country():
 
 @app.route('/country/<country_name>')
 def country_detail(country_name):
-    users = User.query.filter_by(country=country_name).all()
-    return render_template_string(Users, users=users)
+    return render_template_string(country_options_page, country_name=country_name)
+
+@app.route('/country/<country_name>/<option>')
+def country_option_detail(country_name, option):
+    return f"You selected {option} for {country_name}"
 
 if __name__ == "__main__":
     with app.app_context():
