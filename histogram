@@ -1,32 +1,36 @@
 from flask import Flask, render_template_string, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+import os
+from werkzeug.utils import secure_filename
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='./', static_url_path='')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.secret_key = "some_secret_key_for_flask_session"
 
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Define User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
+    profile_picture = db.Column(db.String(120), nullable=True)
     country = db.Column(db.String(100), nullable=True)
 
 # Create the database tables within an app context
 with app.app_context():
     db.create_all()
-
-# In a real-world application, you'd store credentials in a database, not in a dictionary.
-valid_credentials = {
-    'emmanuel': '1234',
-    'abiodun': '1234',
-    'timi': '1234'
-}
 
 welcome_page = """
 <!DOCTYPE html>
@@ -108,11 +112,13 @@ register_page = """
 </head>
 <body>
     <h2>Create an account</h2>
-    <form action="/register" method="post">
+    <form action="/register" method="post" enctype="multipart/form-data">
         Username: <input type="text" name="username" required><br>
         Password: <input type="password" name="password" required><br>
         Sex:      <input type="sex" name="sex" required><br>
         Age:      <input type="age" name="age" required><br>
+        Picture: <input type="file" name="picture" required><br>
+        
         Country: 
         <select name="country">
             <option value="United States">United States</option>
@@ -185,12 +191,9 @@ Users = """
 </html>
 """
 
-
 @app.route('/')
 def welcome():
     return render_template_string(welcome_page)
-
-@app.route('/login', methods=['GET', 'POST'])
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -201,7 +204,6 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user and bcrypt.check_password_hash(user.password, password):
-            #flash('Successfully logged in!')
             return redirect(url_for('select_country'))
         else:
             flash('Invalid credentials. Please try again.')
@@ -214,9 +216,9 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        age =      request.form['age']
-        user =     request.form['user']
-        country =  request.form['country']
+        sex = request.form['sex']
+        age = request.form['age']
+        country = request.form['country']
 
         existing_user = User.query.filter_by(username=username).first()
 
@@ -225,7 +227,17 @@ def register():
             return redirect(url_for('register'))
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        user = User(username=username, password=hashed_password, country=country)
+
+        # Handle the picture upload
+        profile_picture_filename = None
+        if 'picture' in request.files:
+            file = request.files['picture']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                profile_picture_filename = filename
+
+        user = User(username=username, password=hashed_password, profile_picture=profile_picture_filename, country=country)
         
         db.session.add(user)
         db.session.commit()
