@@ -1,6 +1,7 @@
 from flask import Flask, render_template_string, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+from flask import session
 import os
 from werkzeug.utils import secure_filename
 import datetime
@@ -26,6 +27,8 @@ class User(db.Model):
     password = db.Column(db.String(60), nullable=False)
     profile_picture = db.Column(db.String(120), nullable=True)
     country = db.Column(db.String(100), nullable=True)
+    sex = db.Column(db.String(10), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
 
 with app.app_context():
     db.create_all()
@@ -231,6 +234,30 @@ country_options_page = """
 </html>
 """
 
+profile_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ user.username }}'s Profile</title>
+</head>
+<body>
+    <h2>Profile</h2>
+    <p>Username: {{ user.username }}</p>
+    <p>Sex: {{ user.sex }}</p>
+    <p>Age: {{ user.age }}</p>
+    <p>Country: {{ user.country }}</p>
+    {% if user.profile_picture %}
+    <img src="{{ user.profile_picture }}" alt="Profile Picture" width="200">
+    {% endif %}
+    <h3>Forums</h3>
+    <ul>
+        <li><a href="/forum/world_news">World News</a></li>
+        <li><a href="/select-country">Select Country</a></li>
+    </ul>
+</body>
+</html>
+"""
+
 @app.route('/')
 def welcome():
     current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")  
@@ -285,22 +312,24 @@ welcome_page = """
 </html>
 """
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # Assuming you have logic here to get the user based on the provided username
         username = request.form['username']
-        password = request.form['password']
-
         user = User.query.filter_by(username=username).first()
 
+        password = request.form['password']
+
         if user and bcrypt.check_password_hash(user.password, password):
-            return redirect(url_for('select_country'))
+            session['user_id'] = user.id
+            return redirect(url_for('profile'))
         else:
-            flash('Invalid credentials. Please try again.')
+            flash('Invalid username or password.')
             return redirect(url_for('login'))
 
     return render_template_string(login_page)
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -327,7 +356,8 @@ def register():
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 profile_picture_filename = filename
 
-        user = User(username=username, password=hashed_password, profile_picture=profile_picture_filename, country=country)
+        user = User(username=username, password=hashed_password, profile_picture=profile_picture_filename, country=country, sex=sex, age=int(age))
+
         
         db.session.add(user)
         db.session.commit()
@@ -353,6 +383,18 @@ def country_option_detail(country_name, option):
 @app.route('/forum/world_news')
 def world_news():
     return "Welcome World News!"
+
+@app.route('/profile')
+def profile():
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Please login to view your profile.')
+        return redirect(url_for('login'))
+
+    user = User.query.get(user_id)
+    return render_template_string(profile_page, user=user, countries=countries)
+
+
 
 if __name__ == "__main__":
     with app.app_context():
