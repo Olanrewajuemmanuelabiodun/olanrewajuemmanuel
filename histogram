@@ -50,8 +50,8 @@ class Comment(db.Model):
 
 
 with app.app_context():
-    db.drop_all()  # Drop all tables
-    db.create_all()  # Recreate them based on the ORM models
+    db.drop_all()  
+    db.create_all()  
 
 
 welcome_page = """
@@ -390,6 +390,22 @@ news_detail_page = """
 </html>
 """
 
+news_add_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add News</title>
+</head>
+<body>
+    <h2>Add World News</h2>
+    <form action="/add_news" method="post">
+        Title: <input type="text" name="title" required><br>
+        Content: <textarea name="content" required></textarea><br>
+        <input type="submit" value="Add News">
+    </form>
+</body>
+</html>
+"""
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -501,23 +517,54 @@ def profile_details(user_id):
         return redirect(url_for('welcome'))
     return render_template_string(profile_details_page, user=user)
 
-@app.route('/init_news')
-def init_news():
-    news_item = News(title="Insecurity in Nigeria", content="It is getting serious")
-    db.session.add(news_item)
+# @app.route('/init_news')
+# @app.route('/init_extra_news')
+# def init_extra_news():
+#     titles = ["Soccer Today", "Live Forever"]
+#     contents = ["Details about Soccer Today...", "Details about Live Forever..."]
+
+#     for title, content in zip(titles, contents):
+#         # Check if the news already exists
+#         existing_news = News.query.filter_by(title=title).first()
+#         if not existing_news:
+#             news_item = News(title=title, content=content)
+#             db.session.add(news_item)
+
+#     db.session.commit()
+#     return "Extra news items initialized!"
+
+
+@app.route('/add_news', methods=['GET', 'POST'])
+def add_news():
+    # In a real-world application, you'd likely check if the user is authorized to add news here
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+
+        new_news = News(title=title, content=content)
+        db.session.add(new_news)
+        db.session.commit()
+        flash('News added successfully!')
+        return redirect(url_for('world_news'))
+
+    return render_template_string(news_add_page)
+
+def initialize_news():
+    titles_contents = [
+        ("Insecurity in Nigeria", "It is getting serious"),
+        ("Soccer Today", "Details about Soccer Today..."),
+        ("Live Forever", "Details about Live Forever...")
+    ]
+    for title, content in titles_contents:
+        existing_news = News.query.filter_by(title=title).first()
+        if not existing_news:
+            news_item = News(title=title, content=content)
+            db.session.add(news_item)
     db.session.commit()
-    return "News initialized!"
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        
-        # Check if the news item already exists
-        existing_news = News.query.filter_by(title="Insecurity in Nigeria").first()
-        if not existing_news:
-            news_item = News(title="Insecurity in Nigeria", content="It is getting serious")
-            db.session.add(news_item)
-            db.session.commit()
-            print("News initialized!")
-
+        initialize_news()
     app.run(host='0.0.0.0', port=8080, debug=True)
+
