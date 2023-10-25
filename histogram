@@ -36,10 +36,6 @@ class News(db.Model):
     content = db.Column(db.Text, nullable=False)
     comments = db.relationship('Comment', backref='news', lazy=True)
 
-# class Comment(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     content = db.Column(db.Text, nullable=False)
-#     news_id = db.Column(db.Integer, db.ForeignKey('news.id'), nullable=False)
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -47,11 +43,12 @@ class Comment(db.Model):
     news_id = db.Column(db.Integer, db.ForeignKey('news.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User', backref='comments')
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
 
-
-with app.app_context():
-    db.drop_all()  
-    db.create_all()  
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    comments = db.relationship('Comment', backref='category', lazy=True)
 
 
 welcome_page = """
@@ -407,6 +404,37 @@ news_add_page = """
 </html>
 """
 
+category_detail_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ country_name }} - {{ category_name }}</title>
+</head>
+<body>
+    <h2>{{ country_name }} - {{ category_name }}</h2>
+    <h3>Comments:</h3>
+    <ul>
+        {% if comments %}
+            {% for comment in comments %}
+                <li>
+                <img src="{{ url_for('static', filename='uploads/' + comment.user.profile_picture) }}" width="30" alt="Profile Picture">
+                {{ comment.user.username }}: {{ comment.content }}
+                </li>
+            {% endfor %}
+        {% else %}
+            <li>No comments for this category yet.</li>
+        {% endif %}
+    </ul>
+    <form method="post">
+        <textarea name="comment" required></textarea>
+        <input type="submit" value="Comment">
+    </form>
+    <a href="{{ url_for('select_country') }}">Back to countries</a>
+</body>
+</html>
+"""
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -477,7 +505,6 @@ def country_option_detail(country_name, option):
 @app.route('/forum/world_news')
 def world_news():
     news = News.query.all()
-    print(news)  # Check the console for this output
     return render_template_string(world_news_page, news=news)
 
 
@@ -490,13 +517,12 @@ def news_detail(news_id):
         if not user_id:
             flash('Please login to comment.')
             return redirect(url_for('login'))
-        new_comment = Comment(content=comment_content, news=news_item, user_id=user_id)
+        new_comment = Comment(content=comment_content, news_id=news_id, user_id=user_id)
         db.session.add(new_comment)
         db.session.commit()
         flash('Comment added.')
     comments = Comment.query.filter_by(news_id=news_id).all()
     return render_template_string(news_detail_page, news=news_item, comments=comments)
-
 
 
 @app.route('/profile')
@@ -535,9 +561,9 @@ def add_news():
 
 def initialize_news():
     titles_contents = [
-        ("Insecurity in Nigeria", "It is getting serious"),
-        ("Soccer Today", "Details about Soccer Today..."),
-        ("Live Forever", "Details about Live Forever...")
+        ("FG Outlaws Black Market FOREX Transactions", "The Presidential Fiscal Policy and Tax Reforms Committee was set up by President Bola Ahmed Tinubu to review and advise on reforms to shape Nigeria's fiscal policy and tax system. The Committee’s terms of reference covers Fiscal Governance; Revenue Transformation and Economic Growth Facilitation. The work of the committee is further divided into 3 phases, being Quick Wins within 30 days; Critical Reforms within 6 months and Implementation within 1 year."),
+        ("'My Wife Constantly Denies Me Sex'", "I have been married for a little under 2 years. During out courtship, my wife and I were very intimate. Later on, she became pregnant and we welcomed a child but since then, our sex live has never recovered till date. My wife is currently pregnant but the denial didn't start today. She does everything possible to prevent us from having sex, from laying our child on our bed instead of the court to cleaning or watching movies in the lounge room whenever I am in the room, she will then reenter the bedroom when i am asleep. The last time, she said that I don't do enough to get her arose and that if I want sex I have to earn it. She suggested that I have to start in the morning by being nice to her so when it's night, I would have been able to get her arose. I work an average of two shifts everyday, and sleep at home maybe 3 nights a week so I can pay our mortgage and other bills as she barely works due to having to look after our child."),
+        ("Nigerian Woman Found Dead In Her Home In Baltimore, USA", "Nigerian woman found decomposed in her home in the U.S.A two weeks after she passed away and no one knew about it. A Nigerian woman identified as Uju Onyeyili died in the U.S.A and no one knew for over a week until neighbours raised alarm about a foul smell coming from her apartment in Baltimore, Maryland, USA. It is reported that Uju from Abatete in Anambra State, reportedly had an acc#dent two weeks ago, and she is said to have gone home after abandoning her car at the scene. Neighbours then reported to the police after noticing a foul smell coming from Uju's apartment. They also reported that they had not seen her in a week and she needed to tow her car that was involved in the accident. Police investigated and found her decomposing body at her home. Unfortunately, no close relative of hers could be reached in the U.S,, so her photo was shared online as the police asked family members to pick up her corpse or it would be disposed of by the state. Onyeyili, a member of the Brotherhood of the Cross and Star (Olumba Olumba Oba), was eventually buried by the sect in the U.S")
     ]
     for title, content in titles_contents:
         existing_news = News.query.filter_by(title=title).first()
@@ -545,10 +571,68 @@ def initialize_news():
             news_item = News(title=title, content=content)
             db.session.add(news_item)
     db.session.commit()
+    
+@app.route('/country/<country_name>/<category_name>', methods=['GET', 'POST'])
+def country_category_detail(country_name, category_name):
+    category = Category.query.filter_by(name=category_name).first()
+    
+    if not category:
+        print(f"Category {category_name} not found in the database!")
+        flash('Category not found.')
+        return redirect(url_for('select_country'))
+
+    
+    if request.method == 'POST':
+        comment_content = request.form.get('comment')
+        user_id = session.get('user_id')
+        if not user_id:
+            flash('Please login to comment.')
+            return redirect(url_for('login'))
+        
+        new_comment = Comment(content=comment_content, category_id=category.id, user_id=user_id)
+        db.session.add(new_comment)
+        db.session.commit()
+        flash('Comment added.')
+
+    comments = Comment.query.filter_by(category_id=category.id).all()
+    
+    return render_template_string(category_detail_page, country_name=country_name, category_name=category_name, comments=comments)
+
+
+def initialize_categories():
+    categories = ["Study", "Travel", "Housing", "Jobs", "Dating", "Concert", "Sport", "Marriage", "Religion", "Games", "Books", "Politics"]
+    for cat in categories:
+        existing_category = Category.query.filter_by(name=cat).first()
+        if not existing_category:
+            category_item = Category(name=cat)
+            db.session.add(category_item)
+    db.session.commit()
+
+@app.route('/comment/edit/<int:comment_id>', methods=['GET', 'POST'])
+def edit_comment(comment_id):
+    comment = Comment.query.get(comment_id)
+    if request.method == 'POST':
+        comment.content = request.form.get('content')
+        db.session.commit()
+        flash('Comment edited successfully.')
+        return redirect(...) 
+    return render_template_string(edit_comment_page, comment=comment)
+
+@app.route('/comment/delete/<int:comment_id>')
+def delete_comment(comment_id):
+    comment = Comment.query.get(comment_id)
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment deleted.')
+    return redirect(...) 
+
+with app.app_context():
+    db.create_all()
+    initialize_news()
+    initialize_categories()
+
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        initialize_news()
     app.run(host='0.0.0.0', port=8080, debug=True)
+
 
