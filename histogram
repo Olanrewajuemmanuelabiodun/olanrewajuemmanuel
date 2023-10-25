@@ -45,12 +45,17 @@ class Comment(db.Model):
     user = db.relationship('User', backref='comments')
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
     country = db.Column(db.String(100), nullable=True)
+    likes = db.relationship('Like', backref='comment', lazy=True)
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     comments = db.relationship('Comment', backref='category', lazy=True)
 
+class Like(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
 
 welcome_page = """
 <!DOCTYPE html>
@@ -377,7 +382,11 @@ news_detail_page = """
     <h3>Comments:</h3>
     <ul>
         {% for comment in comments %}
-            <li>{{ comment.user.username }}: {{ comment.content }}</li>
+            <li>
+                {{ comment.user.username }}: {{ comment.content }}
+                <button onclick="location.href='/like_comment/{{ comment.id }}'">Like</button>
+                ({{ comment.likes|length }} likes)
+            </li>
         {% endfor %}
     </ul>
     <form method="post">
@@ -387,6 +396,7 @@ news_detail_page = """
 </body>
 </html>
 """
+
 
 
 news_add_page = """
@@ -649,6 +659,30 @@ def delete_comment(comment_id):
     db.session.commit()
     flash('Comment deleted.')
     return redirect(url_for('world_news'))
+
+@app.route('/like_comment/<int:comment_id>')
+def like_comment(comment_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Please login to like a comment.')
+        return redirect(url_for('login'))
+
+    comment = Comment.query.get(comment_id)
+    if not comment:
+        flash('Comment not found.')
+        return redirect(url_for('world_news'))
+
+    # Check if the user has already liked this comment
+    existing_like = Like.query.filter_by(user_id=user_id, comment_id=comment_id).first()
+    if existing_like:
+        flash('You have already liked this comment.')
+        return redirect(url_for('news_detail', news_id=comment.news_id))
+
+    new_like = Like(user_id=user_id, comment_id=comment_id)
+    db.session.add(new_like)
+    db.session.commit()
+    flash('Comment liked.')
+    return redirect(url_for('news_detail', news_id=comment.news_id))
 
 with app.app_context():
     db.create_all()
