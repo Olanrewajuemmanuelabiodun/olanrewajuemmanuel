@@ -14,6 +14,7 @@ UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -46,6 +47,7 @@ class Comment(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
     country = db.Column(db.String(100), nullable=True)
     likes = db.relationship('Like', backref='comment', lazy=True)
+    image_filename = db.Column(db.String(120), nullable=True)
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -379,23 +381,47 @@ news_detail_page = """
 <body>
     <h2>{{ news.title }}</h2>
     <p>{{ news.content|safe }}</p>
+
     <h3>Comments:</h3>
     <ul>
-        {% for comment in comments %}
-            <li>
-                {{ comment.user.username }}: {{ comment.content }}
-                <button onclick="location.href='/like_comment/{{ comment.id }}'">Like</button>
-                ({{ comment.likes|length }} likes)
-            </li>
-        {% endfor %}
+        {# Check if the comments list is present and not empty #}
+        {% if comments %}
+            {# Loop through each comment in the comments list #}
+            {% for comment in comments %}
+                <li>
+                    {# Display the profile picture of the user who made the comment #}
+                    <img src="{{ url_for('static', filename='uploads/' + comment.user.profile_picture) }}" width="30" alt="Profile Picture of {{ comment.user.username }}">
+
+                    {# Display the username and content of the comment #}
+                    <strong>{{ comment.user.username }}</strong>: {{ comment.content }}
+
+                    {# Check if the comment has an associated image and display it #}
+                    {% if comment.image_filename %}
+                        <br>
+                        <img src="{{ url_for('static', filename='uploads/' + comment.image_filename) }}" alt="Image for comment by {{ comment.user.username }}" width="200">
+                    {% endif %}
+                    <br>
+                    <button onclick="location.href='/like_comment/{{ comment.id }}'">Like</button>
+                    ({{ comment.likes|length }} likes)
+                </li>
+            {% endfor %}
+        {% else %}
+            {# Display a message if there are no comments #}
+            <li>No comments for this news yet.</li>
+        {% endif %}
     </ul>
-    <form method="post">
-        <textarea name="comment" required></textarea>
+
+    <h3>Add a Comment:</h3>
+    <form method="post" enctype="multipart/form-data">
+        <textarea name="comment" required></textarea><br>
+        <input type="file" name="image" accept="image/*"><br>
         <input type="submit" value="Comment">
     </form>
 </body>
 </html>
 """
+
+
 
 
 
@@ -431,21 +457,26 @@ category_detail_page = """
                 <li>
                 <img src="{{ url_for('static', filename='uploads/' + comment.user.profile_picture) }}" width="30" alt="Profile Picture">
                 {{ comment.user.username }}: {{ comment.content }}
+                {% if comment.image_filename %}
+                    <br>
+                    <img src="{{ url_for('static', filename='uploads/' + comment.image_filename) }}" alt="Comment Image" width="200">
+                {% endif %}
                 </li>
             {% endfor %}
         {% else %}
             <li>No comments for this category yet.</li>
         {% endif %}
     </ul>
-    <form method="post">
-        <textarea name="comment" required></textarea>
+    <form method="post" enctype="multipart/form-data">
+        <textarea name="comment" required></textarea><br>
+        <input type="file" name="image" accept="image/*"><br>
         <input type="submit" value="Comment">
     </form>
     <a href="{{ url_for('select_country') }}">Back to countries</a>
 </body>
 </html>
-
 """
+
 
 edit_comment_page = """
 <!DOCTYPE html>
@@ -620,7 +651,15 @@ def country_category_detail(country_name, category_name):
             flash('Please login to comment.')
             return redirect(url_for('login'))
         
-        new_comment = Comment(content=comment_content, category_id=category.id, user_id=user_id, country=country_name)
+        image_filename = None
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                image_filename = filename
+
+        new_comment = Comment(content=comment_content, category_id=category.id, user_id=user_id, country=country_name, image_filename=image_filename)
         db.session.add(new_comment)
         db.session.commit()
         flash('Comment added.')
@@ -628,6 +667,7 @@ def country_category_detail(country_name, category_name):
     comments = Comment.query.filter_by(category_id=category.id, country=country_name).all()
     
     return render_template_string(category_detail_page, country_name=country_name, category_name=category_name, comments=comments)
+
 
 
 def initialize_categories():
@@ -684,14 +724,19 @@ def like_comment(comment_id):
     flash('Comment liked.')
     return redirect(url_for('news_detail', news_id=comment.news_id))
 
-with app.app_context():
-    db.create_all()
-    if not News.query.first():
-        initialize_news()
-    if not Category.query.first():
-        initialize_categories()
+def init_db():
+    with app.app_context():
+        db.create_all()
+        if not News.query.first():
+            initialize_news()
+        if not Category.query.first():
+            initialize_categories()
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    init_db()
+    app.run(host='0.0.0.0', port=8082, debug=True)
+
+
 
 
