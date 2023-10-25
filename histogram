@@ -579,8 +579,8 @@ def add_news():
 
 def initialize_news():
     titles_contents = [
-        ("FG Outlaws Black Market FOREX Transactions", 
-         "The Presidential Fiscal Policy and Tax Reforms Committee was set up by President Bola Ahmed Tinubu to review and advise on reforms to shape Nigeria's fiscal policy and tax system. The Committee’s terms of reference covers Fiscal Governance; Revenue Transformation and Economic Growth Facilitation. The work of the committee is further divided into 3 phases, being Quick Wins within 30 days; Critical Reforms within 6 months and Implementation within 1 year. For more information; <a href='https://www.youtube.com/watch?v=hvoqqurpFcQ?si=-s1rUAVfF4riGWyN' target='_blank'>Click here to watch on YouTube</a>."),
+        ("Episode 15: Pop the ballon to eject the least attractive girl on the hunt games show", 
+         "For more information; <a href='https://www.youtube.com/watch?v=fsEUAs9qfRQ' target='_blank'>Click here to watch on YouTube</a>."),
         ("Best of Messi",
          "For more information; <a href='https://www.youtube.com/watch?v=jV0PbW8fJKk' target='_blank'>Click here to watch on YouTube</a>."),
         ("Chelsea Football Club",
