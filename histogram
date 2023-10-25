@@ -581,8 +581,12 @@ def initialize_news():
     titles_contents = [
         ("FG Outlaws Black Market FOREX Transactions", 
          "The Presidential Fiscal Policy and Tax Reforms Committee was set up by President Bola Ahmed Tinubu to review and advise on reforms to shape Nigeria's fiscal policy and tax system. The Committee’s terms of reference covers Fiscal Governance; Revenue Transformation and Economic Growth Facilitation. The work of the committee is further divided into 3 phases, being Quick Wins within 30 days; Critical Reforms within 6 months and Implementation within 1 year. For more information; <a href='https://www.youtube.com/watch?v=hvoqqurpFcQ?si=-s1rUAVfF4riGWyN' target='_blank'>Click here to watch on YouTube</a>."),
-        ("My Wife Constantly Denies Me Sex'", "I have been married for a little under 2 years. During out courtship, my wife and I were very intimate. Later on, she became pregnant and we welcomed a child but since then, our sex live has never recovered till date. My wife is currently pregnant but the denial didn't start today. She does everything possible to prevent us from having sex, from laying our child on our bed instead of the court to cleaning or watching movies in the lounge room whenever I am in the room, she will then reenter the bedroom when i am asleep. The last time, she said that I don't do enough to get her arose and that if I want sex I have to earn it. She suggested that I have to start in the morning by being nice to her so when it's night, I would have been able to get her arose. I work an average of two shifts everyday, and sleep at home maybe 3 nights a week so I can pay our mortgage and other bills as she barely works due to having to look after our child."),
-        ("Nigerian Woman Found Dead In Her Home In Baltimore, USA", "Nigerian woman found decomposed in her home in the U.S.A two weeks after she passed away and no one knew about it. A Nigerian woman identified as Uju Onyeyili died in the U.S.A and no one knew for over a week until neighbours raised alarm about a foul smell coming from her apartment in Baltimore, Maryland, USA. It is reported that Uju from Abatete in Anambra State, reportedly had an acc#dent two weeks ago, and she is said to have gone home after abandoning her car at the scene. Neighbours then reported to the police after noticing a foul smell coming from Uju's apartment. They also reported that they had not seen her in a week and she needed to tow her car that was involved in the accident. Police investigated and found her decomposing body at her home. Unfortunately, no close relative of hers could be reached in the U.S,, so her photo was shared online as the police asked family members to pick up her corpse or it would be disposed of by the state. Onyeyili, a member of the Brotherhood of the Cross and Star (Olumba Olumba Oba), was eventually buried by the sect in the U.S")
+        ("Best of Messi",
+         "For more information; <a href='https://www.youtube.com/watch?v=jV0PbW8fJKk' target='_blank'>Click here to watch on YouTube</a>."),
+        ("Chelsea Football Club",
+         "For more information; <a href='https://www.youtube.com/watch?v=kRtCCQm2deg' target='_blank'>Click here to watch on YouTube</a>."),
+        ("What Can $100 Get in LAGOS, NIGERIA? (Africa's Craziest City)",
+         "For more information; <a href='https://www.youtube.com/watch?v=OXIrIjQMB5c' target='_blank'>Click here to watch on YouTube</a>.")
     ]
     for title, content in titles_contents:
         existing_news = News.query.filter_by(title=title).first()
@@ -614,8 +618,6 @@ def country_category_detail(country_name, category_name):
     comments = Comment.query.filter_by(category_id=category.id, country=country_name).all()
     
     return render_template_string(category_detail_page, country_name=country_name, category_name=category_name, comments=comments)
-
-
 
 
 def initialize_categories():
@@ -654,8 +656,6 @@ with app.app_context():
         initialize_news()
     if not Category.query.first():
         initialize_categories()
-
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080, debug=True)
