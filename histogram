@@ -44,6 +44,7 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User', backref='comments')
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+    country = db.Column(db.String(100), nullable=True)
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -263,7 +264,7 @@ profile_page = """
     <a href="/profile-details/{{ user.id }}">My Profile</a>  
     <h3>Forums</h3>
     <ul>
-        <li><a href="/forum/world_news">World News</a></li>
+       
         <li><a href="/select-country">Select Country</a></li>
     </ul>
 </body>
@@ -372,7 +373,7 @@ news_detail_page = """
 </head>
 <body>
     <h2>{{ news.title }}</h2>
-    <p>{{ news.content }}</p>
+    <p>{{ news.content|safe }}</p>
     <h3>Comments:</h3>
     <ul>
         {% for comment in comments %}
@@ -386,6 +387,7 @@ news_detail_page = """
 </body>
 </html>
 """
+
 
 news_add_page = """
 <!DOCTYPE html>
@@ -432,8 +434,24 @@ category_detail_page = """
     <a href="{{ url_for('select_country') }}">Back to countries</a>
 </body>
 </html>
+
 """
 
+edit_comment_page = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Comment</title>
+</head>
+<body>
+    <h2>Edit Comment</h2>
+    <form method="post">
+        <textarea name="content" required>{{ comment.content }}</textarea>
+        <input type="submit" value="Edit Comment">
+    </form>
+</body>
+</html>
+"""
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -561,8 +579,9 @@ def add_news():
 
 def initialize_news():
     titles_contents = [
-        ("FG Outlaws Black Market FOREX Transactions", "The Presidential Fiscal Policy and Tax Reforms Committee was set up by President Bola Ahmed Tinubu to review and advise on reforms to shape Nigeria's fiscal policy and tax system. The Committee’s terms of reference covers Fiscal Governance; Revenue Transformation and Economic Growth Facilitation. The work of the committee is further divided into 3 phases, being Quick Wins within 30 days; Critical Reforms within 6 months and Implementation within 1 year."),
-        ("'My Wife Constantly Denies Me Sex'", "I have been married for a little under 2 years. During out courtship, my wife and I were very intimate. Later on, she became pregnant and we welcomed a child but since then, our sex live has never recovered till date. My wife is currently pregnant but the denial didn't start today. She does everything possible to prevent us from having sex, from laying our child on our bed instead of the court to cleaning or watching movies in the lounge room whenever I am in the room, she will then reenter the bedroom when i am asleep. The last time, she said that I don't do enough to get her arose and that if I want sex I have to earn it. She suggested that I have to start in the morning by being nice to her so when it's night, I would have been able to get her arose. I work an average of two shifts everyday, and sleep at home maybe 3 nights a week so I can pay our mortgage and other bills as she barely works due to having to look after our child."),
+        ("FG Outlaws Black Market FOREX Transactions", 
+         "The Presidential Fiscal Policy and Tax Reforms Committee was set up by President Bola Ahmed Tinubu to review and advise on reforms to shape Nigeria's fiscal policy and tax system. The Committee’s terms of reference covers Fiscal Governance; Revenue Transformation and Economic Growth Facilitation. The work of the committee is further divided into 3 phases, being Quick Wins within 30 days; Critical Reforms within 6 months and Implementation within 1 year. For more information; <a href='https://www.youtube.com/watch?v=hvoqqurpFcQ?si=-s1rUAVfF4riGWyN' target='_blank'>Click here to watch on YouTube</a>."),
+        ("My Wife Constantly Denies Me Sex'", "I have been married for a little under 2 years. During out courtship, my wife and I were very intimate. Later on, she became pregnant and we welcomed a child but since then, our sex live has never recovered till date. My wife is currently pregnant but the denial didn't start today. She does everything possible to prevent us from having sex, from laying our child on our bed instead of the court to cleaning or watching movies in the lounge room whenever I am in the room, she will then reenter the bedroom when i am asleep. The last time, she said that I don't do enough to get her arose and that if I want sex I have to earn it. She suggested that I have to start in the morning by being nice to her so when it's night, I would have been able to get her arose. I work an average of two shifts everyday, and sleep at home maybe 3 nights a week so I can pay our mortgage and other bills as she barely works due to having to look after our child."),
         ("Nigerian Woman Found Dead In Her Home In Baltimore, USA", "Nigerian woman found decomposed in her home in the U.S.A two weeks after she passed away and no one knew about it. A Nigerian woman identified as Uju Onyeyili died in the U.S.A and no one knew for over a week until neighbours raised alarm about a foul smell coming from her apartment in Baltimore, Maryland, USA. It is reported that Uju from Abatete in Anambra State, reportedly had an acc#dent two weeks ago, and she is said to have gone home after abandoning her car at the scene. Neighbours then reported to the police after noticing a foul smell coming from Uju's apartment. They also reported that they had not seen her in a week and she needed to tow her car that was involved in the accident. Police investigated and found her decomposing body at her home. Unfortunately, no close relative of hers could be reached in the U.S,, so her photo was shared online as the police asked family members to pick up her corpse or it would be disposed of by the state. Onyeyili, a member of the Brotherhood of the Cross and Star (Olumba Olumba Oba), was eventually buried by the sect in the U.S")
     ]
     for title, content in titles_contents:
@@ -577,11 +596,9 @@ def country_category_detail(country_name, category_name):
     category = Category.query.filter_by(name=category_name).first()
     
     if not category:
-        print(f"Category {category_name} not found in the database!")
         flash('Category not found.')
         return redirect(url_for('select_country'))
 
-    
     if request.method == 'POST':
         comment_content = request.form.get('comment')
         user_id = session.get('user_id')
@@ -589,14 +606,16 @@ def country_category_detail(country_name, category_name):
             flash('Please login to comment.')
             return redirect(url_for('login'))
         
-        new_comment = Comment(content=comment_content, category_id=category.id, user_id=user_id)
+        new_comment = Comment(content=comment_content, category_id=category.id, user_id=user_id, country=country_name)
         db.session.add(new_comment)
         db.session.commit()
         flash('Comment added.')
 
-    comments = Comment.query.filter_by(category_id=category.id).all()
+    comments = Comment.query.filter_by(category_id=category.id, country=country_name).all()
     
     return render_template_string(category_detail_page, country_name=country_name, category_name=category_name, comments=comments)
+
+
 
 
 def initialize_categories():
@@ -615,21 +634,27 @@ def edit_comment(comment_id):
         comment.content = request.form.get('content')
         db.session.commit()
         flash('Comment edited successfully.')
-        return redirect(...) 
-    return render_template_string(edit_comment_page, comment=comment)
+        return redirect(url_for('world_news')) 
+    return render_template_string(edit_comment_page, comment=comment)  
 
 @app.route('/comment/delete/<int:comment_id>')
 def delete_comment(comment_id):
     comment = Comment.query.get(comment_id)
+    if session.get('user_id') != comment.user_id:
+        flash('You do not have permission to delete this comment.')
+        return redirect(url_for('world_news'))
     db.session.delete(comment)
     db.session.commit()
     flash('Comment deleted.')
-    return redirect(...) 
+    return redirect(url_for('world_news'))
 
 with app.app_context():
     db.create_all()
-    initialize_news()
-    initialize_categories()
+    if not News.query.first():
+        initialize_news()
+    if not Category.query.first():
+        initialize_categories()
+
 
 
 if __name__ == "__main__":
