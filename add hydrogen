@@ -82,3 +82,73 @@ hydrogen_coords = np.array([first_solution[0], first_solution[1], first_solution
 s.append("H", hydrogen_coords, coords_are_cartesian=True)
 print(s)
 
+
+
+
+import os
+
+# Path to the directory where the gin files are located
+path = "/project/wen/emmanuel/gulp/1"
+os.chdir(path)
+
+# Create a file that contains a list of all .gin files and count them
+gin_files = [f for f in os.listdir() if f.endswith('.gin')]
+num_gin_files = len(gin_files)
+
+with open('gin_file_list.txt', 'w') as list_file:
+    for input_file in gin_files:
+        list_file.write(input_file + '\n')
+
+# Create the contents of the job array submission script
+submit_script = f"""#!/bin/bash
+#SBATCH --job-name=gulp_array
+#SBATCH --output=%A_%a.out
+#SBATCH --error=%A_%a.err
+#SBATCH --array=1-{num_gin_files}
+#SBATCH --time=16:00:00
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH --mem-per-cpu=3G
+
+# Read the input file name from the gin_file_list.txt based on the array index
+input_file=$(sed -n "${{SLURM_ARRAY_TASK_ID}}p" gin_file_list.txt)
+
+# Create the directory to save the files
+output_dir="${{input_file%%.*}}"
+mkdir -p "$output_dir"
+
+# Move the input file to its directory
+mv "$input_file" "$output_dir/"
+
+# Run gulp
+cd "$output_dir"
+gulp < "$input_file"
+
+# Move the .gout file to the output directory (assuming gulp generates a .gout file with the same name as the input file)
+mv "${{input_file%%.*}}.gout" "$output_dir/"
+
+cd ..
+
+# Rename and move the output and error files to the respective directory
+mv "${{SLURM_ARRAY_JOB_ID}}_${{SLURM_ARRAY_TASK_ID}}.out" "$output_dir/${{output_dir}}.out"
+mv "${{SLURM_ARRAY_JOB_ID}}_${{SLURM_ARRAY_TASK_ID}}.err" "$output_dir/${{output_dir}}.err"
+"""
+
+# Write the submission script to a file
+with open("submit_job_array.sh", 'w') as f:
+    f.write(submit_script)
+
+# Inform the user to manually submit the job array
+print("Job array script created. Submit it using: sbatch submit_job_array.sh")
+
+#save as submit_job_array.sh
+#mv submit_job_array.sh create_job_array.py
+#python ./create_job_array.py
+#sbatch submit_job_array.sh
+
+
+
+
+
+
+
