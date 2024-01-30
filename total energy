@@ -1,45 +1,49 @@
-import json
 import os
+import re
+import json
 
-# Get the current working directory
-cwd = os.getcwd()
+def extract_total_energy(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            content = file.read()
+            match = re.search(r'totalenergy\s+(-?\d+\.\d+)', content)
+            if match:
+                return float(match.group(1))
+            else:
+                return None
+    except FileNotFoundError:
+        return None
 
-# Specify the directory path
-directory_path = '/Users/eolanrew/Desktop/new'
+# Replace this with the path to your main directory
+main_directory = '/Users/eolanrew/Desktop/Most_stable_T_site_Direct_Al_H'
 
-# Create an empty dictionary to store the grouped data points
-grouped_data_points = {}
+# Initialize an empty dictionary to store the results
+data = {}
 
-# Loop through all files in the directory
-for file_name in sorted(os.listdir(directory_path)):
-    # Check if the file is a text file
-    if file_name.endswith('.gout'):
-        file_path = os.path.join(directory_path, file_name)
-        # Read the file and extract the energy value
-        with open(file_path, 'r') as f:
-            lines = f.readlines()
-            energy = None
-            for line in lines:
-                if 'totalenergy' in line:
-                    energy_str = line.split()[1]
-                    energy = float(energy_str)
-                    break
-            if energy is not None:
-                # Print the energy value
-                print(file_name, 'Total energy:', energy)
-                # Get the first three letters of the file name
-                group_key = file_name[:3]
-                # Add the energy value to the corresponding group
-                if group_key in grouped_data_points:
-                    grouped_data_points[group_key].append(energy)
-                else:
-                    grouped_data_points[group_key] = [energy]
+# Loop through each folder in the main directory
+for folder_name in sorted(os.listdir(main_directory)):
+    folder_path = os.path.join(main_directory, folder_name)
+    
+    # Check if it's a folder
+    if os.path.isdir(folder_path):
+        prefix = folder_name[:3]  # Assuming the first three characters are common, like "ABW"
+        
+        # Initialize the dictionary for this prefix if not already done
+        if prefix not in data:
+            data[prefix] = {}
+        
+        # Look for the .gout file in this folder
+        for file_name in sorted(os.listdir(folder_path)):
+            if file_name.endswith('.gout'):
+                file_path = os.path.join(folder_path, file_name)
+                total_energy = extract_total_energy(file_path)
+                
+                if total_energy is not None:
+                    data[prefix][folder_name] = total_energy
 
-# Write the grouped data points to a JSON file
-json_file_path = os.path.join(cwd, 'grouped_energy.json')
-with open(json_file_path, 'w') as f:
-    json.dump(grouped_data_points, f)
+# Save the results to a JSON file
+json_file_path = 'Most_stable_T_site_Direct_Al_H.json'  # Replace this with your desired path
+with open(json_file_path, 'w') as json_file:
+    json.dump(data, json_file, indent=4, sort_keys=True)
 
-# Extract the group keys and energy values from the grouped data points
-group_keys = sorted(grouped_data_points.keys())
-energies = [grouped_data_points[key] for key in group_keys]
+print(f"Data has been saved to {json_file_path}")
