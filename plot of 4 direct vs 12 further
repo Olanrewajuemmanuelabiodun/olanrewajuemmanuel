@@ -1,0 +1,40 @@
+import json
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_structure_values_with_colors(path_lowest, path_further):
+    with open(path_lowest, 'r') as file:
+        lowest_data = json.load(file)
+
+    with open(path_further, 'r') as file:
+        further_data = json.load(file)
+
+    # Define colors for the Lowest Direct values
+    colors = ['red', 'green', 'yellow', 'black']
+    
+    # Extract base structure names
+    base_structures = set(key[:3] for key in list(lowest_data.keys()) + list(further_data.keys()))
+    sorted_structures = sorted(base_structures)
+
+    for structure in sorted_structures:
+        plt.figure(figsize=(14, 7))
+
+        # Plot values from Lowest Direct with specific colors
+        lowest_keys = [key for key in lowest_data if key.startswith(structure)]
+        for i, key in enumerate(lowest_keys):
+            plt.scatter(i, lowest_data[key], color=colors[i % len(colors)], label=f'{key} (Lowest Direct)', s=100)
+
+        # Plot values from Further Alum in blue
+        further_keys = [key for key in further_data if key.startswith(structure)]
+        for i, key in enumerate(further_keys):
+            plt.scatter(len(lowest_keys) + i, further_data[key], color='blue', label=f'{key} (Further Alum)', s=100)
+        
+        # Labeling
+        plt.xticks(np.arange(len(lowest_keys) + len(further_keys)), lowest_keys + further_keys, rotation=45, ha='right')
+        plt.ylabel('Lattice energy (eV)')
+        plt.title(f'Lattice Energies for {structure}')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+plot_structure_values_with_colors('Most_stable_T_site_Direct_Al_Na1.json', 'Most_stable_T_site_Further_gap_Al_Na1.json')
