@@ -1,41 +1,50 @@
 import json
 import plotly.graph_objects as go
 
-# Function to load JSON data from file
-def load_json_data(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
+def plot_structure_values_with_colors_plotly(path_lowest, path_further):
+    with open(path_lowest, 'r') as file:
+        lowest_data = json.load(file)
 
-# Function to split dictionary into chunks of 7 items
-def split_dict_into_chunks(input_dict, chunk_size=7):
-    return [dict(list(input_dict.items())[i:i + chunk_size]) for i in range(0, len(input_dict), chunk_size)]
+    with open(path_further, 'r') as file:
+        further_data = json.load(file)
 
-def plot_energy_values_with_plotly(file_path, text_size=16):
-    # Load the data from the provided JSON file path
-    raw_data = load_json_data(file_path)
+    # Define colors for the Lowest Direct values
+    colors = ['red']
     
-    # Extract the differences
-    differences = {structure: values[next(iter(values))] for structure, values in raw_data.items() if values}
+    # Extract base structure names
+    base_structures = set(key[:3] for key in list(lowest_data.keys()) + list(further_data.keys()))
+    sorted_structures = sorted(base_structures)
 
-    # Split the dictionary into chunks of 7
-    chunks = split_dict_into_chunks(differences)
+    for structure in sorted_structures:
+        fig = go.Figure()
 
-    # Create a bar chart for each chunk using Plotly
-    for i, chunk in enumerate(chunks, start=1):
-        structure_names = list(chunk.keys())
-        energy_values = list(chunk.values())
-        
-        fig = go.Figure(data=[
-            go.Bar(x=structure_names, y=energy_values, marker_color='skyblue')
-        ])
-        fig.update_layout(
-            #title=f'Energy Values by Structure (Group {i})',
-            xaxis_title="Zeolite Framework",
-            yaxis_title="Total energy (eV)",
-            plot_bgcolor='white',  # Set the background to white
-            font=dict(size=text_size)
-        )
+        # Plot values from Lowest Direct with specific colors
+        lowest_keys = [key for key in lowest_data if key.startswith(structure)]
+        for i, key in enumerate(lowest_keys):
+            fig.add_trace(go.Scatter(x=[i], y=[lowest_data[key]], 
+                                     mode='markers', 
+                                     marker=dict(color=colors[i % len(colors)]),
+                                     name=f'{key} (Lowest Direct)'))
+
+        # Plot values from Further Alum in blue
+        further_keys = [key for key in further_data if key.startswith(structure)]
+        for i, key in enumerate(further_keys):
+            fig.add_trace(go.Scatter(x=[len(lowest_keys) + i], y=[further_data[key]], 
+                                     mode='markers', 
+                                     marker=dict(color='blue'),
+                                     name=f'{key} (Further Alum)'))
+
+        # Labeling
+        fig.update_layout(xaxis=dict(tickmode='array', 
+                                     tickvals=list(range(len(lowest_keys) + len(further_keys))), 
+                                     ticktext=lowest_keys + further_keys),
+                          xaxis_title='Zeolite Framework',
+                          yaxis_title='Total energy (eV)',
+                          #title=f'Lattice Energies for {structure}',
+                          showlegend=False,
+                          plot_bgcolor='white')  # Set the background color of the plot to white
+        fig.update_xaxes(tickangle=45)
         fig.show()
 
-# Provide the path to your JSON file and optionally adjust the text size
-plot_energy_values_with_plotly('/Users/eolanrew/Desktop/differences_btw pure_silica and one_Al_Na.json', text_size=18)
+# Example usage
+plot_structure_values_with_colors_plotly('Random_Direct_Al(H).json', 'Random_Further_Al(H).json')
