@@ -1,9 +1,8 @@
-#code to generate the gulp input files
 import os
 from pymatgen.core.structure import Structure
 
-# Get a list of all files starting with "Struct" in the current working directory
-file_list = [file for file in os.listdir() if file.startswith('Struct')]
+# Get a list of all files ending with ".cif" in the current working directory
+file_list = [file for file in os.listdir() if file.endswith('.cif')]
 
 for cif_file in file_list:
     # Provide the path to the CIF file
@@ -13,7 +12,7 @@ for cif_file in file_list:
     file_name = os.path.splitext(os.path.basename(cif_file_path))[0]
 
     structure = Structure.from_file(cif_file_path)
-    structure = structure.get_primitive_structure()
+    #structure = structure.get_primitive_structure()
     species = [
         'species',
         'Si core 4.0000',
@@ -26,7 +25,7 @@ for cif_file in file_list:
 
     potentials = [
         'buck',
-        'Si core O2 shel 1283.907 0.32052  10.66158 0.0 10.0',
+        'Si core O2 shel 1283.907 0.32052 10.66158 0.0 10.0',
         'buck',
         'Al core O2 shel 1460.3 0.29912 0.0 0.0 10.0',
         'buck',
@@ -40,15 +39,15 @@ for cif_file in file_list:
         'buck',
         'O2 shel H core 311.97 0.25 0.0 0.0 12.0',
         'morse',
-        'O1 core H core 7.0525 2.1986 0.9485 1.0 1.4',
+        'O1 core H core 7.0525 2.1986 0.9485 0.0 1.4',
         'three',
-        'Si core O2 shel O2 shel 2.09724 109.47 1.8 1.8 3.2',
+        'Si core O2 shel O2 shel 2.09724 109.47 1.9 1.9 3.5',
         'three',
-        'Si core O1 core O2 shel 2.09724 109.47 1.8 1.8 3.2',
+        'Si core O1 core O2 shel 2.09724 109.47 1.9 1.9 3.5',
         'three',
-        'Al core O2 shel O2 shel 2.09724 109.47 1.8 1.8 3.2',
+        'Al core O2 shel O2 shel 2.09724 109.47 1.9 1.9 3.5',
         'three',
-        'Al core O1 core O2 shel 2.09724 109.47 1.8 1.8 3.2',
+        'Al core O1 core O2 shel 2.09724 109.47 1.9 1.9 3.5',
         'spring',
         'O2 shel 74.92',
     ]
@@ -59,29 +58,37 @@ for cif_file in file_list:
     gulp_input_str += f'{structure.lattice.alpha} {structure.lattice.beta} {structure.lattice.gamma}\n'
     gulp_input_str += 'frac\n'
 
+    num_h = 0
+    last_o_ind = None
+    for i in range(len(structure)):
+        if structure[i].specie.symbol == 'O':
+            last_o_ind = i
+        if structure[i].specie.symbol == 'H':
+            num_h += 1
+
+    site_o1 = [structure[last_o_ind - i] for i in range(num_h)]
+
     for site in structure:
         if site.specie.symbol in ['Si', 'Al']:
             frac_coords = [f'{coord:.6f}' for coord in site.frac_coords]
             gulp_input_str += f'{site.specie.symbol} core {frac_coords[0]} {frac_coords[1]} {frac_coords[2]}\n'
-    for site in structure:
-        if site.specie.symbol == 'H':
+        elif site.specie.symbol == 'H':
             frac_coords = [f'{coord:.6f}' for coord in site.frac_coords]
             gulp_input_str += f'{site.specie.symbol} core {frac_coords[0]} {frac_coords[1]} {frac_coords[2]}\n'
-    for site in structure:
-        if site.specie.symbol == 'O':
+        elif site.specie.symbol == 'O' and site in site_o1:
+            frac_coords = [f'{coord:.6f}' for coord in site.frac_coords]
+            gulp_input_str += f'{site.specie.symbol}1 core {frac_coords[0]} {frac_coords[1]} {frac_coords[2]}\n'
+        elif site.specie.symbol == 'O' and site not in site_o1:
             frac_coords = [f'{coord:.6f}' for coord in site.frac_coords]
             gulp_input_str += f'{site.specie.symbol}2 core {frac_coords[0]} {frac_coords[1]} {frac_coords[2]}\n'
-    for site in structure:
-        if site.specie.symbol == 'O':
-            frac_coords = [f'{coord:.6f}' for coord in site.frac_coords]
             gulp_input_str += f'{site.specie.symbol}2 shel {frac_coords[0]} {frac_coords[1]} {frac_coords[2]}\n'
-
+    
     for specie in species:
         gulp_input_str += f'{specie}\n'
-    
+
     for potential in potentials:
         gulp_input_str += f'{potential}\n'
-    
+
     gulp_input_str += f'dump {file_name}.gout\n'
 
     with open(f'{file_name}.gin', 'w') as fl:
